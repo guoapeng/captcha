@@ -39,13 +39,13 @@ func TestReload(t *testing.T) {
 }
 
 func TestRandomDigits(t *testing.T) {
-	d1 := RandomDigits(10)
+	d1 := RandomDigits(20)
 	for _, v := range d1 {
-		if v > 9 {
+		if v >= 12 {
 			t.Errorf("digits not in range 0-9: %v", d1)
 		}
 	}
-	d2 := RandomDigits(10)
+	d2 := RandomDigits(20)
 	if bytes.Equal(d1, d2) {
 		t.Errorf("digits seem to be not random")
 	}

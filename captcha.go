@@ -48,6 +48,7 @@ package captcha
 import (
 	"bytes"
 	"errors"
+	"github.com/satori/go.uuid"
 	"io"
 	"time"
 )
@@ -58,6 +59,7 @@ const (
 	// The number of captchas created that triggers garbage collection used
 	// by default store.
 	CollectNum = 100
+	MaxSoundRec = 10
 	// Expiration time of captchas used by default store.
 	Expiration = 10 * time.Minute
 )
@@ -83,9 +85,13 @@ func New() string {
 // NewLen is just like New, but accepts length of a captcha solution as the
 // argument.
 func NewLen(length int) (id string) {
-	id = randomId()
+	id = uuid.NewV4().String()
 	globalStore.Set(id, RandomDigits(length))
 	return
+}
+
+func GetGlobalStore() Store {
+	return globalStore
 }
 
 // Reload generates and remembers new digits for the given captcha id.  This
@@ -103,27 +109,17 @@ func Reload(id string) bool {
 	return true
 }
 
-// WriteImage writes PNG-encoded image representation of the captcha with the
-// given id. The image will have the given width and height.
-func WriteImage(w io.Writer, id string, width, height int) error {
-	d := globalStore.Get(id, false)
-	if d == nil {
-		return ErrNotFound
-	}
-	_, err := NewImage(id, d, width, height).WriteTo(w)
-	return err
-}
 
 // WriteAudio writes WAV-encoded audio representation of the captcha with the
 // given id and the given language. If there are no sounds for the given
 // language, English is used.
-func WriteAudio(w io.Writer, id string, lang string) error {
+func WriteAudio(w io.Writer, id string, lang string) (*Audio, error) {
 	d := globalStore.Get(id, false)
 	if d == nil {
-		return ErrNotFound
+		return nil, ErrNotFound
 	}
-	_, err := NewAudio(id, d, lang).WriteTo(w)
-	return err
+	//_, err := NewAudio(d, lang).WriteTo(w)
+	return NewAudio(d, lang), nil
 }
 
 // Verify returns true if the given digits are the ones that were used to
@@ -139,7 +135,26 @@ func Verify(id string, digits []byte) bool {
 	if reald == nil {
 		return false
 	}
-	return bytes.Equal(digits, reald)
+	if bytes.Equal(digits, reald) {
+		return true
+	} else {
+		//add an exceptional verify for sound limited sound record
+		if len(digits) == len(reald) {
+			ns := make([]byte, len(reald))
+			for i := range ns {
+				d := reald[i]
+				if d >= MaxSoundRec {
+					ns[i] = d % MaxSoundRec
+				}else {
+					ns[i] = d
+				}
+			}
+			return bytes.Equal(ns, digits)
+		} else {
+			return false
+		}
+
+	}
 }
 
 // VerifyString is like Verify, but accepts a string of digits.  It removes
@@ -155,6 +170,10 @@ func VerifyString(id string, digits string) bool {
 		switch {
 		case '0' <= d && d <= '9':
 			ns[i] = d - '0'
+		case 'A' <= d && d <= 'Z':
+			ns[i] = d - 'A'+10
+		case 'a' <= d && d <= 'z': // for case insensitive verification
+			ns[i] = d - 'a'+10
 		case d == ' ' || d == ',':
 			// ignore
 		default:

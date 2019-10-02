@@ -6,6 +6,7 @@ package captcha
 
 import (
 	"bytes"
+	"github.com/satori/go.uuid"
 	"testing"
 )
 
@@ -43,7 +44,7 @@ func TestCollect(t *testing.T) {
 	ids := make([]string, 10)
 	d := RandomDigits(10)
 	for i := range ids {
-		ids[i] = randomId()
+		ids[i] = uuid.NewV4().String()
 		s.Set(ids[i], d)
 	}
 	s.(*memoryStore).collect()
@@ -67,7 +68,7 @@ func BenchmarkSetCollect(b *testing.B) {
 	s := NewMemoryStore(9999, -1)
 	ids := make([]string, 1000)
 	for i := range ids {
-		ids[i] = randomId()
+		ids[i] = uuid.NewV4().String()
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {

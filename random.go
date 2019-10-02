@@ -41,11 +41,10 @@ const (
 //
 //   out = HMAC(rngKey, purpose || id || 0x00 || digits)  (cut to 16 bytes)
 //
-func deriveSeed(purpose byte, id string, digits []byte) (out [16]byte) {
+func deriveSeed(purpose byte, digits []byte) (out [16]byte) {
 	var buf [sha256.Size]byte
 	h := hmac.New(sha256.New, rngKey[:])
 	h.Write([]byte{purpose})
-	io.WriteString(h, id)
 	h.Write([]byte{0})
 	h.Write(digits)
 	sum := h.Sum(buf[:0])
@@ -54,10 +53,10 @@ func deriveSeed(purpose byte, id string, digits []byte) (out [16]byte) {
 }
 
 // RandomDigits returns a byte slice of the given length containing
-// pseudorandom numbers in range 0-9. The slice can be used as a captcha
+// pseudorandom numbers in range 0-12. The slice can be used as a captcha
 // solution.
 func RandomDigits(length int) []byte {
-	return randomBytesMod(length, 10)
+	return randomBytesMod(length, byte(12))
 }
 
 // randomBytes returns a byte slice of the given length read from CSPRNG.
@@ -96,13 +95,4 @@ func randomBytesMod(length int, mod byte) (b []byte) {
 		}
 	}
 
-}
-
-// randomId returns a new random id string.
-func randomId() string {
-	b := randomBytesMod(idLen, byte(len(idChars)))
-	for i, c := range b {
-		b[i] = idChars[c]
-	}
-	return string(b)
 }

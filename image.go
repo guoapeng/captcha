@@ -33,11 +33,11 @@ type Image struct {
 
 // NewImage returns a new captcha image of the given width and height with the
 // given digits, where each digit must be in range 0-9.
-func NewImage(id string, digits []byte, width, height int) *Image {
+func NewImage(digits []byte, width, height int) *Image {
 	m := new(Image)
 
 	// Initialize PRNG.
-	m.rng.Seed(deriveSeed(imageSeedPurpose, id, digits))
+	m.rng.Seed(deriveSeed(imageSeedPurpose, digits))
 
 	m.Paletted = image.NewPaletted(image.Rect(0, 0, width, height), m.getRandomPalette())
 	m.calculateSizes(width, height, len(digits))

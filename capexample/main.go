@@ -7,7 +7,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/dchest/captcha"
+	"github.com/guoapeng/captcha"
+	"github.com/satori/go.uuid"
 	"io"
 	"log"
 	"net/http"
@@ -24,7 +25,11 @@ func showFormHandler(w http.ResponseWriter, r *http.Request) {
 	d := struct {
 		CaptchaId string
 	}{
-		captcha.New(),
+
+		func(id string) string {
+			captcha.GetGlobalStore().Set(id, captcha.RandomDigits(6))
+			return id
+		}(uuid.NewV4().String()),
 	}
 	if err := formTemplate.Execute(w, &d); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

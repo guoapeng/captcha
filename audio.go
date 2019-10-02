@@ -30,11 +30,11 @@ type Audio struct {
 // are no sounds for the given language, English is used.
 //
 // Possible values for lang are "en", "ja", "ru", "zh".
-func NewAudio(id string, digits []byte, lang string) *Audio {
+func NewAudio(digits []byte, lang string) *Audio {
 	a := new(Audio)
 
 	// Initialize PRNG.
-	a.rng.Seed(deriveSeed(audioSeedPurpose, id, digits))
+	a.rng.Seed(deriveSeed(audioSeedPurpose, digits))
 
 	if sounds, ok := digitSounds[lang]; ok {
 		a.digitSounds = sounds
@@ -44,7 +44,13 @@ func NewAudio(id string, digits []byte, lang string) *Audio {
 	numsnd := make([][]byte, len(digits))
 	nsdur := 0
 	for i, n := range digits {
-		snd := a.randomizedDigitSound(n)
+		var s byte
+		if n >= 10 {
+			s = n % 10
+		} else {
+			s = n
+		}
+		snd := a.randomizedDigitSound(s)
 		nsdur += len(snd)
 		numsnd[i] = snd
 	}

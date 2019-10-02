@@ -18,21 +18,20 @@ func (bc *byteCounter) Write(b []byte) (int, error) {
 func BenchmarkNewImage(b *testing.B) {
 	b.StopTimer()
 	d := RandomDigits(DefaultLen)
-	id := randomId()
+	//id := randomId()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		NewImage(id, d, StdWidth, StdHeight)
+		NewImage( d, StdWidth, StdHeight)
 	}
 }
 
 func BenchmarkImageWriteTo(b *testing.B) {
 	b.StopTimer()
 	d := RandomDigits(DefaultLen)
-	id := randomId()
 	b.StartTimer()
 	counter := &byteCounter{}
 	for i := 0; i < b.N; i++ {
-		img := NewImage(id, d, StdWidth, StdHeight)
+		img := NewImage(d, StdWidth, StdHeight)
 		img.WriteTo(counter)
 		b.SetBytes(counter.n)
 		counter.n = 0
