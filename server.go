@@ -6,6 +6,7 @@ package captcha
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"path"
@@ -14,8 +15,9 @@ import (
 )
 
 type captchaHandler struct {
-	imgWidth  int
-	imgHeight int
+	imgWidth    int
+	imgHeight   int
+	forceReload bool
 }
 
 // Server returns a handler that serves HTTP requests with image or
@@ -40,8 +42,33 @@ type captchaHandler struct {
 // By default, the Server serves audio in English language. To serve audio
 // captcha in one of the other supported languages, append "lang" value, for
 // example, "?lang=ru".
-func Server(imgWidth, imgHeight int) http.Handler {
-	return &captchaHandler{imgWidth, imgHeight}
+func Server(imgWidth, imgHeight int, forceReload bool) http.Handler {
+	return &captchaHandler{imgWidth, imgHeight, forceReload}
+}
+
+func (h *captchaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	dir, file := path.Split(r.URL.Path)
+	ext := path.Ext(file)
+	id := file[:len(file)-len(ext)]
+	if ext != "" && id != "" {
+		if r.FormValue("reload") != "" || h.forceReload {
+			Reload(id, h.forceReload)
+		}
+		if d := globalStore.Get(id, false); d != nil {
+			download := path.Base(dir) == "download"
+			if handler, err := h.createMediaHandler(r); err == nil {
+				writeMedia(handler.createMedia(d), download, w, r, file)
+			} else {
+				http.NotFound(w, r)
+			}
+		} else {
+			http.NotFound(w, r)
+		}
+	} else {
+		http.NotFound(w, r)
+	}
+
+	// Ignore other errors.
 }
 
 func writeMedia(writer io.WriterTo, download bool, w http.ResponseWriter, r *http.Request, name string) {
@@ -56,70 +83,17 @@ func writeMedia(writer io.WriterTo, download bool, w http.ResponseWriter, r *htt
 	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(content.Bytes()))
 }
 
-func (h *captchaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *captchaHandler) createMediaHandler(r *http.Request) (MediaHandler, error) {
 	_, file := path.Split(r.URL.Path)
 	ext := path.Ext(file)
-	id := file[:len(file)-len(ext)]
-	if ext == "" || id == "" {
-		http.NotFound(w, r)
-		return
-	}
-	if r.FormValue("reload") != "" {
-		Reload(id)
-	}
-	if d := globalStore.Get(id, false); d != nil {
-		h.createMediaHandler(r).handle(w, d, r, id)
-	} else {
-		http.NotFound(w, r)
-	}
-	// Ignore other errors.
-}
-
-func (h *captchaHandler) createMediaHandler(r *http.Request) MediaHandler {
-	dir, file := path.Split(r.URL.Path)
-	ext := path.Ext(file)
 	lang := strings.ToLower(r.FormValue("lang"))
-	download := path.Base(dir) == "download"
-	var mediaHandler MediaHandler
+
 	switch ext {
 	case ".png":
-		mediaHandler = &ImgHandler{h.imgWidth, h.imgHeight, download}
+		return &ImgHandler{h.imgWidth, h.imgHeight}, nil
 	case ".wav":
-		mediaHandler = &AudioHandler{lang, download}
+		return &AudioHandler{lang}, nil
 	default:
-		mediaHandler = &ExceptionHandler{}
+		return nil, errors.New("not supported type " + ext)
 	}
-	return mediaHandler
-}
-
-type MediaHandler interface {
-	handle(w http.ResponseWriter, d []byte, r *http.Request, id string)
-}
-
-type AudioHandler struct {
-	lang     string
-	download bool
-}
-
-func (h *AudioHandler) handle(w http.ResponseWriter, d []byte, r *http.Request, id string) {
-	w.Header().Set("Content-Type", "audio/x-wav")
-	writeMedia(NewAudio(d, h.lang), h.download, w, r, id+".wav")
-}
-
-type ImgHandler struct {
-	imgWidth  int
-	imgHeight int
-	download  bool
-}
-
-func (h *ImgHandler) handle(w http.ResponseWriter, d []byte, r *http.Request, id string) {
-	w.Header().Set("Content-Type", "image/png")
-	writeMedia(NewImage(d, h.imgWidth, h.imgHeight), h.download, w, r, id+".png")
-}
-
-type ExceptionHandler struct {
-}
-
-func (h *ExceptionHandler) handle(w http.ResponseWriter, d []byte, r *http.Request, id string) {
-	http.NotFound(w, r)
 }

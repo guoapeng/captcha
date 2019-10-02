@@ -6,6 +6,7 @@ package captcha
 
 import (
 	"bytes"
+	"github.com/satori/go.uuid"
 	"testing"
 )
 
@@ -31,8 +32,24 @@ func TestVerify(t *testing.T) {
 func TestReload(t *testing.T) {
 	id := New()
 	d1 := globalStore.Get(id, false) // cheating
-	Reload(id)
+	Reload(id, false)
 	d2 := globalStore.Get(id, false) // cheating again
+	if bytes.Equal(d1, d2) {
+		t.Errorf("reload didn't work: %v = %v", d1, d2)
+	}
+}
+
+func TestForceReloadWithNoDiditalsCached(t *testing.T) {
+	id := uuid.NewV4().String()
+	d1 := globalStore.Get(id, false) // cheating
+	if len(d1) != 0 {
+		t.Errorf("there should be no digital cached %v", d1)
+	}
+	Reload(id, true)
+	d2 := globalStore.Get(id, false) // cheating again
+	if len(d2) != DefaultLen {
+		t.Errorf("didn't generate proper digitals %v", d2)
+	}
 	if bytes.Equal(d1, d2) {
 		t.Errorf("reload didn't work: %v = %v", d1, d2)
 	}

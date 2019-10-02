@@ -100,12 +100,12 @@ func GetGlobalStore() Store {
 // After calling this function, the image or audio presented to a user must be
 // refreshed to show the new captcha representation (WriteImage and WriteAudio
 // will write the new one).
-func Reload(id string) bool {
+func Reload(id string, forceReload bool) bool {
 	old := globalStore.Get(id, false)
-	if old == nil {
+	if old == nil && !forceReload{
 		return false
 	}
-	globalStore.Set(id, RandomDigits(len(old)))
+	globalStore.Set(id, RandomDigits(DefaultLen))
 	return true
 }
 
