@@ -58,7 +58,7 @@ const (
 	DefaultLen = 6
 	// The number of captchas created that triggers garbage collection used
 	// by default store.
-	CollectNum = 100
+	CollectNum  = 100
 	MaxSoundRec = 10
 	// Expiration time of captchas used by default store.
 	Expiration = 10 * time.Minute
@@ -100,15 +100,14 @@ func GetGlobalStore() Store {
 // After calling this function, the image or audio presented to a user must be
 // refreshed to show the new captcha representation (WriteImage and WriteAudio
 // will write the new one).
-func Reload(id string, forceReload bool) bool {
+func Reload(id string, forceReload bool, digitalLen int) bool {
 	old := globalStore.Get(id, false)
-	if old == nil && !forceReload{
+	if old == nil && !forceReload {
 		return false
 	}
-	globalStore.Set(id, RandomDigits(DefaultLen))
+	globalStore.Set(id, RandomDigits(digitalLen))
 	return true
 }
-
 
 // WriteAudio writes WAV-encoded audio representation of the captcha with the
 // given id and the given language. If there are no sounds for the given
@@ -145,7 +144,7 @@ func Verify(id string, digits []byte) bool {
 				d := reald[i]
 				if d >= MaxSoundRec {
 					ns[i] = d % MaxSoundRec
-				}else {
+				} else {
 					ns[i] = d
 				}
 			}
@@ -171,9 +170,9 @@ func VerifyString(id string, digits string) bool {
 		case '0' <= d && d <= '9':
 			ns[i] = d - '0'
 		case 'A' <= d && d <= 'Z':
-			ns[i] = d - 'A'+10
+			ns[i] = d - 'A' + 10
 		case 'a' <= d && d <= 'z': // for case insensitive verification
-			ns[i] = d - 'a'+10
+			ns[i] = d - 'a' + 10
 		case d == ' ' || d == ',':
 			// ignore
 		default:

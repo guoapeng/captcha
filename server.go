@@ -17,6 +17,7 @@ import (
 type captchaHandler struct {
 	imgWidth    int
 	imgHeight   int
+	digitalLen  int
 	forceReload bool
 }
 
@@ -42,8 +43,8 @@ type captchaHandler struct {
 // By default, the Server serves audio in English language. To serve audio
 // captcha in one of the other supported languages, append "lang" value, for
 // example, "?lang=ru".
-func Server(imgWidth, imgHeight int, forceReload bool) http.Handler {
-	return &captchaHandler{imgWidth, imgHeight, forceReload}
+func Server(imgWidth, imgHeight, digitalLen int, forceReload bool) http.Handler {
+	return &captchaHandler{imgWidth, imgHeight, digitalLen, forceReload}
 }
 
 func (h *captchaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +53,7 @@ func (h *captchaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := file[:len(file)-len(ext)]
 	if ext != "" && id != "" {
 		if r.FormValue("reload") != "" || h.forceReload {
-			Reload(id, h.forceReload)
+			Reload(id, h.forceReload, h.digitalLen)
 		}
 		if d := globalStore.Get(id, false); d != nil {
 			download := path.Base(dir) == "download"
